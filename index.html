@@ -1,0 +1,891 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#09263a">
+  <title>Apex AI | Educational assistant</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --ink: #153044;
+      --muted: #587185;
+      --line: #cfdfeb;
+      --paper: #f5fbff;
+      --canvas: #eaf4fb;
+      --forest: #09263a;
+      --forest-soft: #10465d;
+      --accent: #12b8c5;
+      --mint: #d2eff2;
+      --lime: #a8e9e7;
+      --coral: #ef8067;
+      --gold: #f0c96d;
+      --shadow: 0 16px 40px rgba(15, 51, 76, .09);
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      font-synthesis: none;
+      text-rendering: optimizeLegibility;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-width: 320px; background: var(--canvas); color: var(--ink); }
+    button, input, textarea, select { font: inherit; }
+    button { cursor: pointer; }
+    .app-shell { min-height: 100vh; display: grid; grid-template-columns: 246px minmax(0, 1fr); }
+    .app-shell.tutor-screen { height: 100vh; height: 100dvh; min-height: 0; overflow: hidden; }
+    .app-shell.tutor-screen .sidebar { height: 100%; }
+    .app-shell.tutor-screen main { height: 100%; display: flex; flex-direction: column; min-height: 0; }
+    .app-shell.tutor-screen .topbar { flex: 0 0 75px; }
+    .app-shell.tutor-screen .content { width: 100%; max-width: none; flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; padding: 22px 32px 24px; }
+    .app-shell.tutor-screen .hero-row { flex: 0 0 auto; margin-bottom: 18px; }
+    .app-shell.tutor-screen .hero-row .intro { margin-bottom: 0; }
+    .app-shell.tutor-screen .tutor-grid { flex: 1; min-height: 0; align-items: stretch; }
+    .app-shell.tutor-screen .tutor-panel { display: flex; flex-direction: column; min-height: 0; }
+    .app-shell.tutor-screen .conversation { flex: 1; min-height: 0; max-height: none; }
+    .sidebar { position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; padding: 26px 17px 18px; color: white; background: var(--forest); }
+    .brand { display: flex; align-items: center; gap: 11px; padding: 0 8px 29px; color: white; text-decoration: none; }
+    .brand-mark { width: 34px; height: 34px; display: grid; place-items: center; color: white; background: var(--accent); border-radius: 10px; }
+    .brand-mark svg { width: 26px; height: 26px; }
+    .brand-name { font: 700 23px Georgia, serif; letter-spacing: 0; }
+    .workspace-label { padding: 0 10px 9px; color: #97bfca; font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; }
+    .nav-list { display: grid; gap: 5px; }
+    .nav-button { display: flex; align-items: center; gap: 12px; width: 100%; padding: 11px 12px; color: #c4e1e6; text-align: left; background: transparent; border: 0; border-radius: 9px; transition: background .18s, color .18s; }
+    .nav-button:hover { color: white; background: rgba(255,255,255,.08); }
+    .nav-button[aria-current="page"] { color: white; background: var(--accent); font-weight: 700; }
+    .nav-glyph { width: 19px; font-size: 16px; text-align: center; }
+    .sidebar-spacer { flex: 1; }
+    .streak-card { margin: 18px 4px 14px; padding: 15px; background: var(--forest-soft); border: 1px solid rgba(255,255,255,.1); border-radius: 12px; }
+    .streak-top { display: flex; align-items: center; justify-content: space-between; font-size: 12px; font-weight: 700; }
+    .streak-dot { color: var(--gold); font-size: 18px; }
+    .streak-card p { margin: 8px 0 0; color: #c0e1e3; font-size: 11px; line-height: 1.5; }
+    .profile { display: flex; align-items: center; gap: 10px; padding: 15px 7px 0; border-top: 1px solid rgba(255,255,255,.16); }
+    .avatar { width: 34px; height: 34px; flex: 0 0 auto; display: grid; place-items: center; border-radius: 50%; font-size: 12px; font-weight: 700; }
+    .avatar-student { color: #553d2e; background: #f2c5a1; }
+    .avatar-teacher { color: #244b45; background: #cde7d3; }
+    .avatar-group { color: #4c4540; background: #f4d987; }
+    .profile-name { font-size: 12px; font-weight: 700; }
+    .profile-meta { margin-top: 3px; color: #b8ccc2; font-size: 10px; }
+    main { min-width: 0; }
+    .topbar { height: 75px; display: flex; align-items: center; justify-content: space-between; padding: 0 42px; background: rgba(240, 249, 255, .94); border-bottom: 1px solid var(--line); }
+    .crumb { color: var(--muted); font-size: 12px; }
+    .crumb strong { color: var(--ink); }
+    .top-actions { position: relative; display: flex; align-items: center; gap: 10px; }
+    .login-panel { position: absolute; top: calc(100% + 9px); right: 66px; z-index: 6; width: min(300px, calc(100vw - 32px)); display: grid; gap: 10px; padding: 15px; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 9px; box-shadow: var(--shadow); }
+    .login-panel label { display: grid; gap: 6px; font-size: 11px; font-weight: 700; }
+    .login-panel input { width: 100%; min-width: 0; min-height: 38px; padding: 9px 10px; color: var(--ink); background: var(--canvas); border: 1px solid var(--line); border-radius: 6px; font-size: 13px; }
+    .login-panel p { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.5; }
+    .verification-code { display: block; padding: 9px 11px; color: var(--ink); background: var(--canvas); border: 1px dashed var(--accent); border-radius: 6px; font: 700 18px monospace; letter-spacing: 2px; }
+    .login-error { color: #a33f54 !important; font-weight: 700; }
+    .tutorial-scrim { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; padding: 16px; background: rgba(3, 20, 34, .72); }
+    .tutorial-dialog { width: min(520px, 100%); padding: 24px; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); }
+    .tutorial-dialog h2 { margin: 0 0 9px; font: 400 25px Georgia, serif; }
+    .tutorial-dialog p { margin: 0 0 18px; color: var(--muted); font-size: 13px; line-height: 1.6; }
+    .tutorial-kicker { margin-bottom: 9px; color: var(--muted); font-size: 10px; font-weight: 700; text-transform: uppercase; }
+    .tutorial-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+    .tutorial-progress { width: 100%; height: 4px; margin: 0 0 18px; accent-color: var(--accent); }
+    .today-chip { padding: 8px 11px; color: #45677a; background: #e2f0f8; border-radius: 99px; font-size: 11px; }
+    .accent-control { width: 34px; height: 34px; display: grid; place-items: center; background: var(--paper); border: 1px solid var(--line); border-radius: 7px; }
+    .accent-control input { width: 24px; height: 24px; padding: 0; border: 0; background: transparent; cursor: pointer; }
+    .content { width: min(1150px, 100%); margin: 0 auto; padding: 36px 42px 50px; }
+    .eyebrow { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; color: #386678; font-size: 10px; font-weight: 700; letter-spacing: 1.35px; text-transform: uppercase; }
+    .eyebrow::before { width: 17px; height: 2px; content: ""; background: var(--coral); }
+    h1, h2, h3, p { margin-top: 0; }
+    h1 { margin-bottom: 9px; font: 400 38px Georgia, serif; letter-spacing: 0; line-height: 1.13; }
+    .intro { max-width: 660px; margin-bottom: 24px; color: #59748a; font-size: 13px; line-height: 1.65; }
+    .hero-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 22px; }
+    .subject-select { display: flex; align-items: center; gap: 9px; padding: 9px 11px; color: #45677a; background: var(--paper); border: 1px solid var(--line); border-radius: 8px; font-size: 11px; }
+    .subject-select select { color: var(--ink); background: transparent; border: 0; outline: 0; font-size: 11px; }
+    .tutor-grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(230px, .78fr); gap: 19px; align-items: start; }
+    .panel { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 3px 16px rgba(15,51,76,.04); }
+    .tutor-panel { overflow: hidden; }
+    .panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 19px; border-bottom: 1px solid var(--line); }
+    .panel-heading h2 { margin: 0; font-size: 13px; }
+    .live-label { display: flex; align-items: center; gap: 6px; color: #59748a; font-size: 10px; }
+    .live-label::before { width: 6px; height: 6px; content: ""; background: #74bb83; border-radius: 50%; }
+    .conversation { min-height: 302px; max-height: 460px; overflow-y: auto; padding: 20px; }
+    .message { display: flex; align-items: flex-start; gap: 10px; margin: 0 0 17px; }
+    .message.student { flex-direction: row-reverse; }
+    .message .avatar { width: 28px; height: 28px; font-size: 10px; }
+    .message-body { max-width: min(88%, 600px); }
+    .message-meta { display: flex; align-items: center; gap: 7px; margin: 1px 0 6px; color: var(--muted); font-size: 10px; }
+    .message.student .message-meta { justify-content: flex-end; }
+    .bubble { padding: 12px 14px; color: #334f63; background: #e8f3fa; border-radius: 3px 11px 11px 11px; font-size: 12px; line-height: 1.65; overflow-wrap: anywhere; }
+    .message.student .bubble { color: white; background: var(--forest); border-radius: 11px 3px 11px 11px; }
+    .answer-section + .answer-section { margin-top: 11px; }
+    .answer-section strong { display: block; margin-bottom: 3px; color: #1c425a; font-size: 11px; }
+    .answer-section p { margin: 0; }
+    .message.student .bubble p { margin: 0; }
+    .markdown-answer { overflow-wrap: anywhere; white-space: normal; }
+    .markdown-answer > :first-child { margin-top: 0; }
+    .markdown-answer > :last-child { margin-bottom: 0; }
+    .markdown-answer p, .markdown-answer ul, .markdown-answer ol { margin: 0 0 10px; }
+    .markdown-answer pre { max-width: 100%; overflow-x: auto; padding: 11px; color: #d8edf5; background: #0c2638; border-radius: 7px; }
+    .markdown-answer code { padding: 1px 4px; color: #087f91; background: rgba(18,184,197,.12); border-radius: 4px; font-family: Consolas, monospace; }
+    .markdown-answer pre code { padding: 0; color: inherit; background: transparent; }
+    .assistant-error { margin: 9px 0 0; color: #a33f54; font-size: 10px; }
+    .assistant-tools { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 18px; color: var(--muted); border-bottom: 1px solid var(--line); font-size: 10px; }
+    .assistant-tools button { min-height: 26px; }
+    .attachment-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .attachment-chip { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; padding: 5px 7px; color: #386678; background: #e2f2f9; border: 1px solid var(--line); border-radius: 6px; font-size: 10px; }
+    .attachment-name { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .attachment-remove { width: 20px; height: 20px; padding: 0; color: inherit; background: transparent; border: 0; font-size: 14px; }
+    .attachment-status { margin-top: 6px; color: var(--muted); font-size: 10px; }
+    .chat-actions { display: flex; align-items: center; gap: 7px; flex: 0 0 auto; }
+    .chat-history { position: relative; }
+    .chat-history summary { min-height: 28px; display: flex; align-items: center; padding: 0 9px; color: #45677a; background: #e2f0f8; border: 1px solid var(--line); border-radius: 6px; cursor: pointer; list-style: none; }
+    .chat-history summary::-webkit-details-marker { display: none; }
+    .chat-history-list { position: absolute; top: calc(100% + 6px); right: 0; z-index: 7; width: min(260px, calc(100vw - 40px)); max-height: 250px; overflow-y: auto; padding: 5px; background: var(--paper); border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--shadow); }
+    .chat-history-item { width: 100%; min-height: 34px; display: block; padding: 8px 9px; color: var(--ink); text-align: left; background: transparent; border: 0; border-radius: 5px; font-size: 11px; }
+    .chat-history-item:hover, .chat-history-item.selected { background: var(--mint); }
+    .demo-note { margin: 0 18px 14px; padding: 9px 11px; color: #37637b; background: #e2f2f9; border-radius: 7px; font-size: 10px; line-height: 1.5; }
+    .composer { padding: 12px 15px 15px; border-top: 1px solid var(--line); }
+    .composer-box { padding: 10px 12px 8px; border: 1px solid var(--line); border-radius: 9px; transition: border-color .2s, box-shadow .2s; }
+    .composer-box:focus-within { border-color: #85b997; box-shadow: 0 0 0 3px rgba(116,187,131,.13); }
+    .tutor-composer .ai-box { width: 90%; max-width: 600px; margin: 0 auto; padding: 12px; background: var(--paper); }
+    .tutor-input-row { display: flex; align-items: center; gap: 10px; }
+    .tutor-input-row input { flex: 1; min-width: 0; min-height: 38px; padding: 10px; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 6px; font-size: 12px; }
+    .tutor-input-row input:focus { outline: 2px solid #85b997; outline-offset: 1px; }
+    .tutor-input-row .primary-button { min-height: 38px; padding: 0 15px; }
+    .tutor-composer .composer-bottom { margin-top: 9px; }
+    .composer textarea { display: block; width: 100%; min-height: 54px; resize: vertical; color: var(--ink); background: transparent; border: 0; outline: none; font-size: 12px; line-height: 1.5; }
+    .composer textarea::placeholder { color: #99a59f; }
+    .composer-bottom { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .composer-hint { color: #698196; font-size: 10px; }
+    .primary-button, .secondary-button, .small-button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; border: 0; border-radius: 7px; font-weight: 700; transition: transform .15s, background .15s; }
+    .primary-button { min-height: 36px; padding: 0 13px; color: white; background: var(--accent); font-size: 11px; }
+    .primary-button:hover { filter: brightness(.9); transform: translateY(-1px); }
+    .primary-button:disabled { cursor: wait; opacity: .7; }
+    .secondary-button { min-height: 34px; padding: 0 11px; color: var(--forest); background: var(--mint); font-size: 11px; }
+    .secondary-button:hover { background: #d8ebdc; }
+    .small-button { min-height: 30px; padding: 0 9px; color: #60736a; background: #f1f5f1; font-size: 10px; }
+    .side-stack { display: grid; gap: 14px; }
+    .side-card { padding: 17px; }
+    .side-card h3 { margin-bottom: 12px; font-size: 12px; }
+    .suggestion-list { display: grid; gap: 7px; }
+    .suggestion { width: 100%; padding: 10px 11px; color: #45677a; text-align: left; background: #f1f8fc; border: 1px solid #dceaf3; border-radius: 7px; font-size: 11px; line-height: 1.4; }
+    .suggestion:hover { border-color: #9ccbd9; background: #e6f4fa; }
+    .tip-card { position: relative; overflow: hidden; padding: 18px; background: #e3f1f8; border: 0; }
+    .tip-card::after { position: absolute; right: -19px; bottom: -34px; width: 90px; height: 90px; content: ""; background: rgba(239,128,103,.2); border-radius: 50%; }
+    .tip-mark { margin-bottom: 7px; color: #ba7849; font: 700 20px Georgia, serif; }
+    .tip-card h3 { margin-bottom: 6px; }
+    .tip-card p { position: relative; z-index: 1; margin: 0; color: #4f6879; font-size: 11px; line-height: 1.55; }
+    .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; margin-bottom: 22px; }
+    .page-head .intro { margin: 0; }
+    .chat-layout { display: grid; grid-template-columns: 255px minmax(0, 1fr); min-height: 570px; overflow: hidden; }
+    .chat-list { padding: 15px; background: #f3f9fd; border-right: 1px solid var(--line); }
+    .list-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
+    .list-head h2 { margin: 0; font-size: 12px; }
+    .chat-item { display: flex; align-items: flex-start; gap: 10px; width: 100%; padding: 11px 9px; text-align: left; background: transparent; border: 0; border-radius: 8px; }
+    .chat-item:hover { background: #e8f3f8; }
+    .chat-item.selected { background: #d9eff5; }
+    .chat-item .avatar { width: 33px; height: 33px; }
+    .chat-item-copy { min-width: 0; padding-top: 2px; }
+    .chat-item-title { display: block; overflow: hidden; color: #24485d; font-size: 11px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+    .chat-item-sub { display: block; margin-top: 4px; overflow: hidden; color: #617d90; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+    .chat-main { min-width: 0; display: flex; flex-direction: column; }
+    .chat-main-head { display: flex; align-items: center; gap: 10px; padding: 14px 17px; border-bottom: 1px solid var(--line); }
+    .chat-main-head .avatar { width: 35px; height: 35px; }
+    .chat-main-title { margin: 0; font-size: 12px; }
+    .chat-main-sub { margin: 3px 0 0; color: var(--muted); font-size: 10px; }
+    .chat-messages { flex: 1; min-height: 300px; max-height: 420px; overflow-y: auto; padding: 18px; }
+    .empty-state { display: grid; place-content: center; min-height: 230px; color: #819087; text-align: center; font-size: 12px; }
+    .empty-state strong { margin-bottom: 6px; color: #40554b; font: 400 21px Georgia, serif; }
+    .create-form { display: grid; gap: 9px; margin: 4px 0 13px; padding: 12px; background: white; border: 1px solid var(--line); border-radius: 8px; }
+    .create-form label { display: grid; gap: 5px; color: #52645a; font-size: 10px; font-weight: 700; }
+    .create-form input, .create-form select { width: 100%; min-height: 34px; padding: 7px 8px; color: var(--ink); background: white; border: 1px solid #dce5dd; border-radius: 6px; font-size: 11px; }
+    .agenda-panel { max-width: 760px; padding: 18px; }
+    .agenda-form { display: flex; gap: 9px; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
+    .agenda-form input { flex: 1; min-width: 0; min-height: 40px; padding: 9px 11px; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 7px; font-size: 12px; }
+    .agenda-list { display: grid; gap: 7px; margin: 16px 0 0; padding: 0; list-style: none; }
+    .agenda-item { display: flex; align-items: center; gap: 9px; padding: 10px 11px; background: var(--canvas); border: 1px solid var(--line); border-radius: 7px; }
+    .agenda-toggle { width: 20px; height: 20px; flex: 0 0 auto; padding: 0; color: var(--forest); background: transparent; border: 1px solid #9eafa3; border-radius: 5px; font-size: 12px; }
+    .agenda-task { flex: 1; color: var(--ink); font-size: 12px; line-height: 1.45; overflow-wrap: anywhere; }
+    .agenda-item.completed .agenda-task { color: var(--muted); text-decoration: line-through; }
+    .agenda-delete { min-height: 28px; padding: 0 8px; color: var(--muted); background: transparent; border: 1px solid var(--line); border-radius: 6px; font-size: 10px; }
+    .agenda-empty { margin: 16px 0 0; color: var(--muted); font-size: 12px; }
+    .teacher-note { padding: 12px 14px; color: #6e6042; background: #fff7dc; border-bottom: 1px solid #f1e5c3; font-size: 10px; line-height: 1.5; }
+    .notice { margin-top: 13px; padding: 11px 13px; color: #617169; background: #eaf3e9; border-radius: 7px; font-size: 10px; line-height: 1.5; }
+    .toast { position: fixed; right: 22px; bottom: 22px; z-index: 3; max-width: calc(100vw - 44px); padding: 12px 16px; color: white; background: var(--forest); border-radius: 8px; box-shadow: var(--shadow); font-size: 12px; animation: toast-in .2s ease-out; }
+    .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; clip-path: inset(50%); }
+    @keyframes toast-in { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: translateY(0); } }
+    @media (max-width: 1000px) {
+      .app-shell { grid-template-columns: 215px minmax(0, 1fr); }
+      .content { padding-right: 25px; padding-left: 25px; }
+      .topbar { padding-right: 25px; padding-left: 25px; }
+      .tutor-grid { grid-template-columns: minmax(0, 1fr); }
+      .side-stack { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .app-shell.tutor-screen .tutor-grid { grid-template-columns: minmax(0, 1fr); }
+      .app-shell.tutor-screen .side-stack { display: none; }
+    }
+    @media (max-width: 700px) {
+    const DEFAULT_ACCENT = "#3a86ff";
+    let currentAccent = DEFAULT_ACCENT;
+    try {
+      const savedAccent = localStorage.getItem("apex_custom_accent");
+      if (savedAccent && CSS.supports("color", savedAccent)) currentAccent = savedAccent;
+    } catch (error) { console.warn("Could not load the saved accent color.", error); }
+    document.documentElement.style.setProperty("--accent", currentAccent);
+      .app-shell { display: block; padding-bottom: 65px; }
+      .app-shell.tutor-screen { height: 100vh; height: 100dvh; padding-bottom: 62px; }
+      .app-shell.tutor-screen main { height: calc(100% - 62px); }
+      .app-shell.tutor-screen .sidebar { height: 62px; }
+      .app-shell.tutor-screen .topbar { flex-basis: 58px; height: 58px; }
+      .app-shell.tutor-screen .content { padding: 17px 16px 12px; }
+      .app-shell.tutor-screen .hero-row { gap: 10px; margin-bottom: 12px; }
+      .app-shell.tutor-screen h1 { font-size: 29px; }
+      .app-shell.tutor-screen .intro { font-size: 12px; line-height: 1.45; }
+      .app-shell.tutor-screen .tutor-grid { display: flex; }
+      .app-shell.tutor-screen .tutor-panel { flex: 1; width: 100%; }
+      .app-shell.tutor-screen .panel-heading { padding: 12px 14px; }
+      .app-shell.tutor-screen .conversation { padding: 12px; }
+      .app-shell.tutor-screen .demo-note { margin: 0 10px 10px; }
+      .assistant-tools { align-items: flex-start; flex-direction: column; }
+      .chat-actions { max-width: 100%; flex-wrap: wrap; }
+      .sidebar { position: fixed; inset: auto 0 0; z-index: 5; width: 100%; height: 62px; padding: 5px 8px; border-top: 1px solid rgba(255,255,255,.15); }
+      .brand, .workspace-label, .sidebar-spacer, .streak-card, .profile { display: none; }
+      .nav-list { grid-template-columns: repeat(4, 1fr); gap: 4px; height: 100%; }
+      .nav-button { flex-direction: column; justify-content: center; gap: 2px; padding: 4px 2px; font-size: 9px; text-align: center; }
+      .nav-glyph { font-size: 16px; }
+      .topbar { height: 58px; padding: 0 17px; }
+      .content { padding: 25px 16px 32px; }
+      h1 { font-size: 31px; }
+      .hero-row { flex-direction: column; }
+      .subject-select { align-self: flex-start; }
+      .page-head { align-items: flex-start; flex-direction: column; }
+      .side-stack { grid-template-columns: 1fr; }
+      .chat-layout { grid-template-columns: 1fr; }
+      .chat-list { padding: 12px; border-right: 0; border-bottom: 1px solid var(--line); }
+      .chat-list-items { display: flex; gap: 5px; overflow-x: auto; }
+      .chat-item { flex: 0 0 190px; }
+      .chat-layout { min-height: 650px; }
+      .chat-messages { min-height: 260px; }
+      .conversation { min-height: 280px; padding: 14px; }
+    }
+    @media (max-width: 420px) {
+      .tutor-input-row { align-items: stretch; flex-direction: column; }
+      .tutor-input-row .primary-button { width: 100%; }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --ink: #e5f1f7;
+        --muted: #a3bfce;
+        --line: #274357;
+        --paper: #132d43;
+        --canvas: #091d30;
+        --forest: #071d30;
+        --forest-soft: #0d4057;
+        --accent: #29c4cf;
+        --mint: #143c51;
+        --lime: #75ced3;
+        --shadow: 0 16px 40px rgba(0, 0, 0, .32);
+        color-scheme: dark;
+      }
+      body { background: var(--canvas); color: var(--ink); }
+      .topbar { background: rgba(14, 37, 56, .96); }
+      .today-chip, .subject-select { color: #cce4ec; background: #173a52; }
+      .subject-select select { color: var(--ink); }
+      .intro, .eyebrow, .live-label { color: #b2ceda; }
+      .bubble { color: #deedf4; background: #1b3b52; }
+      .answer-section strong { color: #ecf7fb; }
+      .demo-note { color: #c8e7f1; background: #163d53; }
+      .composer-box { border-color: var(--line); }
+      .tutor-composer .ai-box, .tutor-input-row input, .create-form, .create-form input, .create-form select { color: var(--ink); background: var(--paper); border-color: var(--line); }
+      .tutor-input-row input { color: var(--ink); }
+      .composer textarea { color: var(--ink); }
+      .composer textarea::placeholder, .tutor-input-row input::placeholder { color: #9eb9c7; }
+      .composer-hint { color: #a3bfce; }
+      .secondary-button, .small-button { color: #d9edf3; background: #174055; }
+      .suggestion { color: #d0e6ed; background: #142f44; border-color: #2b4c61; }
+      .suggestion:hover { background: #1b4257; border-color: #3c6879; }
+      .tip-card { background: #243b50; }
+      .tip-card p { color: #d5e6ed; }
+      .chat-list { background: #0d263b; border-color: var(--line); }
+      .chat-item:hover { background: #18394f; }
+      .chat-item.selected { background: #164858; }
+      .chat-item-title { color: #e0edf3; }
+      .chat-item-sub { color: #a3bfce; }
+      .chat-main-head { border-color: var(--line); }
+      .create-form label { color: #c5dfe9; }
+      .teacher-note { color: #c4e1eb; background: #173d54; border-color: #285369; }
+      .notice { color: #c6e0e9; background: #14374c; }
+      .empty-state { color: #a3bfce; }
+      .empty-state strong { color: #e5f1f7; }
+      .agenda-form input { color: var(--ink); background: var(--paper); border-color: var(--line); }
+      .agenda-item { background: #18261e; }
+      .agenda-toggle, .agenda-delete { color: #dce8de; border-color: #506457; }
+    }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <script>
+    "use strict";
+    const STORAGE_KEY = "brightside-learning-v1";
+    const subjects = ["Biology", "Mathematics", "History", "Literature", "Physics", "General"];
+    const defaultState = {
+      view: "tutor",
+      subject: "Biology",
+      currentChatId: "chat-start",
+      chats: [{ id: "chat-start", title: "New chat", messages: [], context: [], updatedAt: 0 }],
+      groups: [
+        { id: "group-bio", name: "Biology chat", topic: "Cells and living systems", members: 8, color: "group", messages: [{ role: "assistant", author: "Group member", time: "10:14", text: "How do plant and animal cells compare? Share an idea and build on each other's notes." }] },
+        { id: "group-math", name: "Algebra ideas", topic: "Equations · Week 2", members: 5, color: "teacher", messages: [{ role: "assistant", author: "Jordan", time: "Yesterday", text: "I made a few examples for solving two-step equations. Want to compare approaches?" }] }
+      ],
+      selectedGroup: "group-bio",
+      teachers: [
+        { id: "maya", name: "Ms. Maya Chen", subject: "Biology teacher", initials: "MC", color: "teacher", messages: [{ role: "teacher", time: "Yesterday", text: "Hi there! I left a few notes on your cell diagram. The labels are looking much clearer. Bring your question about mitochondria to our next check-in." }, { role: "student", time: "Yesterday", text: "Thanks! I am still a little mixed up about how mitochondria are different from chloroplasts." }] },
+        { id: "lee", name: "Mr. Lee Morgan", subject: "Mathematics teacher", initials: "LM", color: "group", messages: [{ role: "teacher", time: "Mon", text: "Your work on the practice set showed good persistence. Send me the step where you got stuck and we can look at it together." }] },
+        { id: "imani", name: "Ms. Imani Brooks", subject: "History teacher", initials: "IB", color: "student", messages: [{ role: "teacher", time: "Tue", text: "For your source analysis, remember to ask who created the source and what they wanted their audience to believe." }] }
+      ],
+      selectedTeacher: "maya",
+      showCreateGroup: false,
+      agenda: [],
+      loginOpen: false,
+      tutorialChoice: false,
+      tutorialActive: false,
+      tutorialStep: 0
+    };
+    function loadState() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+        if (saved && Array.isArray(saved.groups) && Array.isArray(saved.teachers)) {
+          const restored = { ...defaultState, ...saved };
+          if (!Array.isArray(saved.chats) || !saved.chats.length) {
+            restored.chats = structuredClone(defaultState.chats);
+            restored.currentChatId = defaultState.currentChatId;
+          } else {
+            restored.chats = saved.chats.filter((chat) => chat && typeof chat.id === "string").map((chat) => ({ ...chat, messages: Array.isArray(chat.messages) ? chat.messages : [], context: Array.isArray(chat.context) ? chat.context.slice(-12) : [], updatedAt: Number(chat.updatedAt) || 0 }));
+            if (!restored.chats.some((chat) => chat.id === restored.currentChatId)) restored.currentChatId = restored.chats[0]?.id || defaultState.currentChatId;
+            const currentChat = restored.chats.find((chat) => chat.id === restored.currentChatId);
+            if (currentChat) restored.chats = restored.chats.filter((chat) => chat.messages.length || chat.id === currentChat.id);
+          }
+          const oldGroupNames = { "Biology study circle": "Biology chat", "Algebra practice": "Algebra ideas" };
+          restored.groups = restored.groups.map((group) => ({ ...group, name: oldGroupNames[group.name] || group.name, messages: (group.messages || []).map((message) => ({ ...message, author: message.author === "Study buddy" ? "Group member" : message.author })) }));
+          delete restored.tutorMessages;
+          localStorage.removeItem("apex_ai_recent_memory");
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(restored));
+          return restored;
+        }
+      } catch (error) { console.warn("Could not load saved study data.", error); }
+      return structuredClone(defaultState);
+    }
+    const state = loadState();
+    const PROFILE_KEY = "apex_ai_profile";
+    function isValidEmail(email) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || "").trim()); }
+    function loadProfile() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(PROFILE_KEY));
+        if (saved && typeof saved.name === "string" && saved.name.trim() && isValidEmail(saved.email)) return { name: saved.name.trim(), email: saved.email.trim().toLowerCase() };
+      } catch (error) { console.warn("Could not load the local profile.", error); }
+      return null;
+    }
+    let currentProfile = loadProfile();
+    let pendingLogin = null;
+    let loginError = "";
+    const MAX_AI_MESSAGES = 12;
+    const MAX_ATTACHMENTS = 3;
+    const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
+    const MAX_ATTACHMENT_TEXT = 8000;
+    let pendingFiles = [];
+    let attachmentStatus = "";
+    let markdownParser = null;
+    let markdownSanitizer = null;
+    let assistantBusy = false;
+    async function loadMarkdownTools() {
+      if (markdownParser && markdownSanitizer) return;
+      const [markedModule, sanitizerModule] = await Promise.all([
+        import("https://cdn.jsdelivr.net/npm/marked@15.0.12/+esm"),
+        import("https://cdn.jsdelivr.net/npm/dompurify@3.2.6/+esm")
+      ]);
+      markdownParser = markedModule.marked;
+      markdownSanitizer = sanitizerModule.default;
+    }
+    function safeMarkdown(text) {
+      if (!markdownParser || !markdownSanitizer) return `<p>${escapeHtml(text).replace(/\n/g, "<br>")}</p>`;
+      return markdownSanitizer.sanitize(markdownParser.parse(text), { FORBID_TAGS: ["img", "iframe", "style", "script"], FORBID_ATTR: ["style"] });
+    }
+    function truncateAttachmentText(text) {
+      const normalized = String(text || "").trim();
+      return normalized.length > MAX_ATTACHMENT_TEXT ? `${normalized.slice(0, MAX_ATTACHMENT_TEXT)}\n[Text truncated for length.]` : normalized;
+    }
+    async function loadMammoth() {
+      if (window.mammoth?.extractRawText) return window.mammoth;
+      await new Promise((resolve, reject) => {
+        const script = document.createElement("script");
+        script.src = "https://unpkg.com/mammoth@1.9.0/mammoth.browser.min.js";
+        script.onload = resolve;
+        script.onerror = () => reject(new Error("DOCX reader could not be loaded."));
+        document.head.appendChild(script);
+      });
+      if (!window.mammoth?.extractRawText) throw new Error("DOCX reader is unavailable.");
+      return window.mammoth;
+    }
+    async function extractAttachment(file) {
+      if (file.size > MAX_ATTACHMENT_BYTES) throw new Error(`${file.name} is larger than 10 MB.`);
+      const extension = file.name.split(".").pop().toLowerCase();
+      if (["txt", "md"].includes(extension) || file.type.startsWith("text/")) {
+        return { name: file.name, text: truncateAttachmentText(await file.text()) };
+      }
+      if (extension === "pdf" || file.type === "application/pdf") {
+        const pdfjs = await import("https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.mjs");
+        pdfjs.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.mjs";
+        const pdf = await pdfjs.getDocument({ data: await file.arrayBuffer() }).promise;
+        const pageTexts = [];
+        for (let pageNumber = 1; pageNumber <= Math.min(pdf.numPages, 20); pageNumber += 1) {
+          const page = await pdf.getPage(pageNumber);
+          const content = await page.getTextContent();
+          pageTexts.push(content.items.map((item) => item.str || "").join(" "));
+          if (pageTexts.join("\n").length >= MAX_ATTACHMENT_TEXT) break;
+        }
+        return { name: file.name, text: truncateAttachmentText(pageTexts.join("\n\n")) || "No selectable text was found in this PDF." };
+      }
+      if (extension === "docx" || file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
+        const mammoth = await loadMammoth();
+        const result = await mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() });
+        return { name: file.name, text: truncateAttachmentText(result.value) || "No text was found in this document." };
+      }
+      if (file.type.startsWith("image/") || ["png", "jpg", "jpeg", "webp"].includes(extension)) {
+        const { createWorker } = await import("https://cdn.jsdelivr.net/npm/tesseract.js@6.0.1/+esm");
+        const worker = await createWorker("eng");
+        try {
+          const result = await worker.recognize(file);
+          return { name: file.name, text: truncateAttachmentText(result.data.text) || "OCR could not find readable text in this image." };
+        } finally { await worker.terminate(); }
+      }
+      throw new Error(`${file.name} is not a supported file type.`);
+    }
+    function isSupportedAttachment(file) {
+      const extension = file.name.split(".").pop().toLowerCase();
+      return ["txt", "md", "pdf", "docx", "png", "jpg", "jpeg", "webp"].includes(extension) || file.type.startsWith("text/");
+    }
+    function isGreeting(text) { return /^(hi|hello|hey|good morning|good afternoon|good evening|how are you)[!.?\s]*$/i.test(text.trim()); }
+    function createVerificationCode() {
+      const values = new Uint32Array(1);
+      crypto.getRandomValues(values);
+      return String(values[0] % 1000000).padStart(6, "0");
+    }
+    const DEFAULT_ACCENT = "#12b8c5";
+    let currentAccent = DEFAULT_ACCENT;
+    try {
+      const savedAccent = localStorage.getItem("apex_custom_accent");
+      if (savedAccent && CSS.supports("color", savedAccent)) currentAccent = savedAccent;
+    } catch (error) { console.warn("Could not load the saved accent color.", error); }
+    document.documentElement.style.setProperty("--accent", currentAccent);
+    const app = document.querySelector("#app");
+    const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]);
+    const initials = (name) => String(name).split(/\s+/).map((part) => part[0]).slice(0, 2).join("").toUpperCase();
+    function persist() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+    function activeGroup() { return state.groups.find((group) => group.id === state.selectedGroup) || state.groups[0]; }
+    function activeTutorChat() { return state.chats.find((chat) => chat.id === state.currentChatId) || state.chats[0]; }
+    function createTutorChat() {
+      if (!activeTutorChat()?.messages.length) return;
+      const chat = { id: `chat-${Date.now()}`, title: "New chat", messages: [], context: [], updatedAt: Date.now() };
+      state.chats.unshift(chat);
+      state.currentChatId = chat.id;
+      state.view = "tutor";
+      persist();
+      render();
+    }
+    function activeTeacher() { return state.teachers.find((teacher) => teacher.id === state.selectedTeacher) || state.teachers[0]; }
+    function timeGreeting() {
+      const hour = new Date().getHours();
+      if (hour < 12) return "Good morning";
+      if (hour < 18) return "Good afternoon";
+      return "Good evening";
+    }
+    function renderLoginPanel() {
+      if (!state.loginOpen) return "";
+      if (pendingLogin) return `<form class="login-panel" id="login-verify-form"><p>Enter the code to finish signing in as ${escapeHtml(pendingLogin.profile.name)}:</p><output class="verification-code" aria-label="Demo verification code">${pendingLogin.code}</output><label for="verification-code">Verification code<input id="verification-code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" placeholder="6-digit code" required></label><p class="login-error" role="alert">${escapeHtml(loginError)}</p><p>This is a local demo code. It was not emailed; email verification requires a configured backend.</p><div class="composer-bottom"><button class="primary-button" type="submit">Verify and log in</button><button class="small-button" type="button" data-action="resend-code">New code</button><button class="small-button" type="button" data-action="cancel-login">Cancel</button></div></form>`;
+      return `<form class="login-panel" id="login-form"><label for="login-name">What should Apex call you?<input id="login-name" name="name" type="text" maxlength="40" autocomplete="given-name" placeholder="Your name" required></label><label for="login-email">Email address<input id="login-email" name="email" type="email" maxlength="254" autocomplete="email" placeholder="you@example.com" required></label><p class="login-error" role="alert">${escapeHtml(loginError)}</p><div class="composer-bottom"><button class="primary-button" type="submit">Continue</button><button class="small-button" type="button" data-action="cancel-login">Cancel</button></div><p>Your name and email stay in this browser. This prototype cannot send announcement emails.</p></form>`;
+    }
+    const tutorialSteps = [
+      { view: "tutor", title: "Ask Apex anything", text: "Ask questions in your own words. Apex can explain topics, brainstorm ideas, help with writing, and work through problems. Online questions go to Pollinations AI." },
+      { view: "tutor", title: "Keep chats organized", text: "Start a fresh chat for a new topic. Open History to return to a previous conversation; each chat keeps its own recent context." },
+      { view: "groups", title: "Bring people together", text: "Create a group around a project, interest, or shared goal, then exchange messages in its chat." },
+      { view: "teachers", title: "Contact a teacher", text: "Open a teacher conversation and write a message. In this prototype, messages are only stored in this browser and are not delivered." },
+      { view: "agenda", title: "Keep track of tasks", text: "Add agenda items, mark them complete, and remove them when you are done. Your agenda stays in this browser." },
+      { view: "tutor", title: "Make it yours", text: "Change the aqua accent with the color control. Sign-in personalizes your greeting; the displayed demo code is not emailed, and no announcement emails are sent." }
+    ];
+    function renderTutorial() {
+      if (state.tutorialChoice) return `<div class="tutorial-scrim"><section class="tutorial-dialog" role="dialog" aria-modal="true" aria-labelledby="tutorial-title"><div class="tutorial-kicker">Welcome to Apex AI</div><h2 id="tutorial-title">Want a quick tour?</h2><p>I can show you the assistant, chat history, groups, teacher messages, agenda, and ways to personalize your workspace.</p><div class="tutorial-actions"><button class="small-button" type="button" data-action="skip-tutorial">I'll explore on my own</button><button class="primary-button" type="button" data-action="start-tutorial">Show me</button></div></section></div>`;
+      if (!state.tutorialActive) return "";
+      const step = tutorialSteps[state.tutorialStep];
+      if (!step) return "";
+      return `<div class="tutorial-scrim"><section class="tutorial-dialog" role="dialog" aria-modal="true" aria-labelledby="tutorial-title"><div class="tutorial-kicker">Apex AI tour · ${state.tutorialStep + 1} of ${tutorialSteps.length}</div><progress class="tutorial-progress" max="${tutorialSteps.length}" value="${state.tutorialStep + 1}" aria-label="Tour progress"></progress><h2 id="tutorial-title">${step.title}</h2><p>${step.text}</p><div class="tutorial-actions"><button class="small-button" type="button" data-action="skip-tutorial">Exit tour</button><button class="small-button" type="button" data-action="previous-tutorial" ${state.tutorialStep === 0 ? "disabled" : ""}>Back</button><button class="primary-button" type="button" data-action="next-tutorial">${state.tutorialStep === tutorialSteps.length - 1 ? "Finish" : "Next"}</button></div></section></div>`;
+    }
+    function avatar(label, kind = "student") { return `<span class="avatar avatar-${kind}" aria-hidden="true">${escapeHtml(label)}</span>`; }
+    function renderNav() {
+      const items = [["tutor", "✳", "AI assistant"], ["groups", "◉", "Groups"], ["teachers", "✉", "Teachers"], ["agenda", "☷", "Agenda"]];
+      return items.map(([view, glyph, title]) => `<button class="nav-button" data-view="${view}" ${state.view === view ? 'aria-current="page"' : ""}><span class="nav-glyph" aria-hidden="true">${glyph}</span><span>${title}</span></button>`).join("");
+    }
+    function renderShell() {
+      const title = { tutor: "AI assistant", groups: "Groups", teachers: "Teacher messages", agenda: "Agenda" }[state.view];
+      const date = new Intl.DateTimeFormat(undefined, { weekday: "short", month: "short", day: "numeric" }).format(new Date());
+      return `<div class="app-shell ${state.view === "tutor" ? "tutor-screen" : ""}">
+        <aside class="sidebar" aria-label="Main navigation">
+          <a class="brand" href="#home" aria-label="Apex AI home"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none"><path d="M4.5 8.5c4.4-2 8.3-1.2 11.5 1.1v17c-3.7-2.6-7.6-3.1-11.5-1.3v-16.8Zm23 0c-4.4-2-8.3-1.2-11.5 1.1v17c3.7-2.6 7.6-3.1 11.5-1.3v-16.8Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M22.7 3.3v5.4m-2.7-2.7h5.4" stroke="var(--lime)" stroke-width="1.8" stroke-linecap="round"/></svg></span><span class="brand-name">apex ai</span></a>
+          <div class="workspace-label">Your Apex space</div>
+          <nav class="nav-list">${renderNav()}</nav>
+          <div class="sidebar-spacer"></div>
+          <section class="streak-card" aria-label="Your activity"><div class="streak-top"><span>You're showing up</span><span class="streak-dot" aria-hidden="true">✦</span></div><p>Small steps count. Keep asking, creating, and coming back.</p></section>
+          <div class="profile">${avatar(currentProfile ? initials(currentProfile.name) : "U")}<div><div class="profile-name">${escapeHtml(currentProfile?.name || "User")}</div><div class="profile-meta">${currentProfile ? "Signed in · local demo" : "Personal account · demo"}</div></div></div>
+        </aside>
+        <main>
+          <header class="topbar"><div class="crumb">My workspace <span aria-hidden="true"> / </span> <strong>${title}</strong></div><div class="top-actions"><label class="accent-control" title="Choose accent color"><input id="accent-picker" type="color" value="${escapeHtml(currentAccent)}" aria-label="Choose accent color"></label><button class="small-button" type="button" data-action="reset-accent" aria-label="Reset accent color" title="Reset accent color">↺</button>${currentProfile ? `<span class="today-chip">${escapeHtml(currentProfile.name)}</span><button class="small-button" type="button" data-action="logout">Sign out</button>` : `<button class="small-button" type="button" data-action="open-login">Log in</button>`}<span class="today-chip">${escapeHtml(date)}</span>${renderLoginPanel()}</div></header>
+          <div class="content" id="view-root">${renderView()}</div>
+        </main>
+      </div>${state.toast ? `<div class="toast" role="status">${escapeHtml(state.toast)}</div>` : ""}${renderTutorial()}`;
+    }
+    function renderTutorMessage(message) {
+      const student = message.role === "student";
+      const attachmentNames = (message.attachments || []).map((attachment) => `<span class="attachment-chip">📎 ${escapeHtml(attachment.name)}</span>`).join("");
+      const body = student ? `<p>${escapeHtml(message.text)}</p>${attachmentNames}` : message.markdown ? `<div class="markdown-answer">${safeMarkdown(message.markdown)}</div>` : (message.sections || []).map((section) => `<div class="answer-section"><strong>${escapeHtml(section.title)}</strong><p>${escapeHtml(section.text)}</p></div>`).join("");
+      const error = message.error ? `<p class="assistant-error">The online assistant couldn't be reached, so this is a built-in guide instead.</p>` : "";
+      return `<article class="message ${student ? "student" : ""}">${avatar(student ? "U" : "AI", student ? "student" : "teacher")}<div class="message-body"><div class="message-meta"><strong>${student ? "You" : "Apex AI"}</strong><span>${escapeHtml(message.time || "Now")}</span></div><div class="bubble">${body}${error}</div></div></article>`;
+    }
+    function renderTutor() {
+      const prompts = ["Why do leaves change color?", "Help me brainstorm a story idea.", "Draft a polite email asking for more information."];
+      const chat = activeTutorChat();
+      const history = state.chats.map((item) => `<button class="chat-history-item ${item.id === chat.id ? "selected" : ""}" type="button" data-chat-id="${escapeHtml(item.id)}">${escapeHtml(item.title)}</button>`).join("");
+      const messages = chat.messages.length ? chat.messages.map(renderTutorMessage).join("") : `<div class="empty-state"><strong>Start anywhere.</strong><span>Ask a question, share an idea, or say hello.</span></div>`;
+      return `<div class="hero-row"><div><div class="eyebrow">Your AI space</div><h1>${timeGreeting()}, ${escapeHtml(currentProfile?.name || "User")}.</h1><p class="intro">Ask about anything, explore an idea, plan a project, or get help writing. Apex AI will work through it with you step by step.</p></div><label class="subject-select"><span>Topic</span><select id="subject-select" aria-label="Choose a topic area">${subjects.map((subject) => `<option ${state.subject === subject ? "selected" : ""}>${subject}</option>`).join("")}</select></label></div>
+        <div class="tutor-grid"><section class="panel tutor-panel" aria-label="AI assistant conversation"><div class="panel-heading"><h2>Your chat</h2><span class="live-label">${assistantBusy ? "Thinking with you..." : "Ready when you are"}</span></div><div class="assistant-tools"><span>Online answers may be rate-limited. Questions go to Pollinations AI.</span><div class="chat-actions"><button class="small-button" type="button" data-action="new-chat">New chat</button><details class="chat-history"><summary>History (${state.chats.length})</summary><div class="chat-history-list">${history}</div></details><button class="small-button" type="button" data-action="clear-ai-memory" ${chat.context.length ? "" : "disabled"}>Clear memory (${Math.floor(chat.context.length / 2)})</button></div></div><div class="conversation" id="tutor-conversation" aria-live="polite">${messages}</div><div class="demo-note">Apex AI can make mistakes or miss context. Verify important information with reliable sources.</div><form class="composer tutor-composer" id="tutor-form"><div class="composer-box ai-box"><label class="sr-only" for="tutor-input">Ask a question</label><div class="tutor-input-row"><input id="tutor-input" name="message" type="text" placeholder="Ask anything..." ${assistantBusy ? "disabled" : ""} required><button class="small-button attachment-button" type="button" data-action="open-attachments" aria-label="Attach files" title="Attach documents or images">📎</button><button class="primary-button" type="submit" ${assistantBusy ? "disabled" : ""}>Send <span aria-hidden="true">→</span></button></div><input id="attachment-input" class="sr-only" type="file" accept=".txt,.md,.pdf,.docx,.png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp" multiple><div class="attachment-list">${pendingFiles.map((file, index) => `<span class="attachment-chip"><span class="attachment-name">${escapeHtml(file.name)}</span><button class="attachment-remove" type="button" data-remove-attachment="${index}" aria-label="Remove ${escapeHtml(file.name)}">×</button></span>`).join("")}</div>${attachmentStatus ? `<div class="attachment-status" role="status">${escapeHtml(attachmentStatus)}</div>` : ""}<div class="composer-bottom"><span class="composer-hint">Attach text documents or images. Images are read with OCR.</span></div></div></form></section>
+        <aside class="side-stack"><section class="panel side-card"><h3>Try a starting point</h3><div class="suggestion-list">${prompts.map((prompt) => `<button class="suggestion" type="button" data-prompt="${escapeHtml(prompt)}">${escapeHtml(prompt)}</button>`).join("")}</div></section><section class="panel side-card tip-card"><div class="tip-mark" aria-hidden="true">“</div><h3>Learning note</h3><p>Not getting it yet is not the same as not being able to get it. Confusion is often the first useful clue.</p></section></aside></div>`;
+    }
+    function renderGroupMessage(message) {
+      const mine = message.role === "student";
+      const author = ["Brightside", "Sparkwise"].includes(message.author) ? "Apex AI" : message.author || "Study buddy";
+      return `<article class="message ${mine ? "student" : ""}">${avatar(mine ? "U" : initials(author), mine ? "student" : "group")}<div class="message-body"><div class="message-meta"><strong>${escapeHtml(mine ? "You" : author)}</strong><span>${escapeHtml(message.time || "Now")}</span></div><div class="bubble"><p>${escapeHtml(message.text)}</p></div></div></article>`;
+    }
+    function renderGroups() {
+      const group = activeGroup();
+      if (!group) return `<div class="empty-state"><strong>Your first group</strong><span>Create a group to connect around a shared interest or project.</span></div>`;
+      const form = state.showCreateGroup ? `<form class="create-form" id="create-group-form"><label>Group name<input name="name" maxlength="48" placeholder="e.g. Project brainstorm" required></label><label>What is this group for?<input name="topic" maxlength="64" placeholder="A shared interest or goal" required></label><button class="primary-button" type="submit">Create group</button></form>` : "";
+      return `<div class="page-head"><div><div class="eyebrow">Better, together</div><h1>Bring people together.</h1><p class="intro">Share questions, compare ideas, and make room for everyone's perspective.</p></div><button class="primary-button" type="button" data-action="toggle-create">${state.showCreateGroup ? "Close form" : "+ New group"}</button></div>
+        <section class="panel chat-layout" aria-label="Group conversations"><aside class="chat-list"><div class="list-head"><h2>Your groups</h2><span class="live-label">${state.groups.length} groups</span></div>${form}<div class="chat-list-items">${state.groups.map((item) => `<button class="chat-item ${item.id === group.id ? "selected" : ""}" data-group="${escapeHtml(item.id)}">${avatar(initials(item.name), item.color || "group")}<span class="chat-item-copy"><span class="chat-item-title">${escapeHtml(item.name)}</span><span class="chat-item-sub">${escapeHtml(item.topic)} · ${item.members} members</span></span></button>`).join("")}</div></aside>
+        <div class="chat-main"><header class="chat-main-head">${avatar(initials(group.name), group.color || "group")}<div><h2 class="chat-main-title">${escapeHtml(group.name)}</h2><p class="chat-main-sub">${escapeHtml(group.topic)} · ${group.members} members</p></div></header><div class="chat-messages" id="group-messages" aria-live="polite">${(group.messages || []).map(renderGroupMessage).join("")}</div><form class="composer" id="group-message-form"><div class="composer-box"><label class="sr-only" for="group-input">Write a message to your group</label><textarea id="group-input" name="message" placeholder="Add a thought, question, or idea..." required></textarea><div class="composer-bottom"><span class="composer-hint">Every perspective is welcome.</span><button class="primary-button" type="submit">Send <span aria-hidden="true">→</span></button></div></div></form></div></section>`;
+    }
+    function renderTeacherMessage(message) {
+      const mine = message.role === "student";
+      const text = message.text.replace(/^Hi Alex!/, "Hi there!");
+      return `<article class="message ${mine ? "student" : ""}">${avatar(mine ? "U" : initials(activeTeacher()?.name || "Teacher"), mine ? "student" : "teacher")}<div class="message-body"><div class="message-meta"><strong>${escapeHtml(mine ? "You" : activeTeacher()?.name || "Teacher")}</strong><span>${escapeHtml(message.time || "Now")}</span></div><div class="bubble"><p>${escapeHtml(text)}</p></div></div></article>`;
+    }
+    function renderTeachers() {
+      const teacher = activeTeacher();
+      if (!teacher) return `<div class="empty-state"><strong>No teacher conversations yet</strong><span>Your school can add teachers to this space.</span></div>`;
+      return `<div class="page-head"><div><div class="eyebrow">A real person in your corner</div><h1>Talk it through.</h1><p class="intro">Send a question or share what is feeling tricky. Your teacher can follow up when they are available.</p></div></div>
+        <section class="panel chat-layout" aria-label="Teacher messages"><aside class="chat-list"><div class="list-head"><h2>Your teachers</h2><span class="live-label">${state.teachers.length} contacts</span></div><div class="chat-list-items">${state.teachers.map((item) => `<button class="chat-item ${item.id === teacher.id ? "selected" : ""}" data-teacher="${escapeHtml(item.id)}">${avatar(item.initials, item.color)}<span class="chat-item-copy"><span class="chat-item-title">${escapeHtml(item.name)}</span><span class="chat-item-sub">${escapeHtml(item.subject)}</span></span></button>`).join("")}</div></aside>
+        <div class="chat-main"><header class="chat-main-head">${avatar(teacher.initials, teacher.color)}<div><h2 class="chat-main-title">${escapeHtml(teacher.name)}</h2><p class="chat-main-sub">${escapeHtml(teacher.subject)}</p></div></header><div class="teacher-note">Messages here are saved only in this browser demo. For urgent or sensitive concerns, use your school's approved communication channel.</div><div class="chat-messages" id="teacher-messages" aria-live="polite">${(teacher.messages || []).map(renderTeacherMessage).join("")}</div><form class="composer" id="teacher-message-form"><div class="composer-box"><label class="sr-only" for="teacher-input">Write a private message to your teacher</label><textarea id="teacher-input" name="message" placeholder="Write your teacher a message..." required></textarea><div class="composer-bottom"><span class="composer-hint">Only your teacher should see this.</span><button class="primary-button" type="submit">Send message <span aria-hidden="true">→</span></button></div></div></form></div></section>
+        <div class="notice">This is a local prototype, not a school messaging system. Messages do not leave this device.</div>`;
+    }
+    function renderAgenda() {
+      const tasks = state.agenda || [];
+      return `<div class="page-head"><div><div class="eyebrow">One step at a time</div><h1>Make a little room to focus.</h1><p class="intro">Capture plans, reminders, or next steps. Small actions count.</p></div></div>
+        <section class="panel agenda-panel" aria-label="Personal agenda"><h2>Today's agenda</h2><form class="agenda-form" id="agenda-form"><label class="sr-only" for="agenda-input">Add an item to your agenda</label><input id="agenda-input" name="task" maxlength="180" placeholder="Add an item, reminder, or goal..." required><button class="primary-button" type="submit">Add item <span aria-hidden="true">+</span></button></form>${tasks.length ? `<ul class="agenda-list">${tasks.map((task) => `<li class="agenda-item ${task.completed ? "completed" : ""}"><button class="agenda-toggle" type="button" data-agenda-toggle="${escapeHtml(task.id)}" aria-label="${task.completed ? "Mark incomplete" : "Mark complete"}" aria-pressed="${Boolean(task.completed)}">${task.completed ? "✓" : ""}</button><span class="agenda-task">${escapeHtml(task.text)}</span><button class="agenda-delete" type="button" data-agenda-delete="${escapeHtml(task.id)}">Remove</button></li>`).join("")}</ul>` : `<p class="agenda-empty">Nothing on your agenda yet. Add one next step to get started.</p>`}<p class="notice">Your agenda is saved only in this browser. It is not shared with your teachers or classmates.</p></section>`;
+    }
+    function renderView() {
+      if (state.view === "groups") return renderGroups();
+      if (state.view === "teachers") return renderTeachers();
+      if (state.view === "agenda") return renderAgenda();
+      return renderTutor();
+    }
+    function render() {
+      app.innerHTML = renderShell();
+      const form = app.querySelector("#tutor-form");
+      const input = form?.querySelector("#tutor-input");
+      if (input) input.required = pendingFiles.length === 0;
+      if (form && attachmentStatus) {
+        let status = form.querySelector(".attachment-status");
+        if (!status) {
+          status = document.createElement("div");
+          status.className = "attachment-status";
+          status.setAttribute("role", "status");
+          form.querySelector(".composer-bottom")?.before(status);
+        }
+        status.textContent = attachmentStatus;
+      }
+    }
+    function nowLabel() { return new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" }).format(new Date()); }
+    function tutorAnswer(question, subject) {
+      const lower = question.toLowerCase();
+      if (/^(hi|hello|hey|good morning|good afternoon|good evening|how are you)[!.?\s]*$/.test(lower)) return [
+        { title: "👋 Hi there!", text: "It's good to see you. I'm ready to help with a question, a study topic, or anything else on your mind. What would you like to explore?" },
+        { title: "You're welcome to start anywhere", text: "You don't need to phrase it perfectly. Ask in your own words and we'll take it one step at a time." }
+      ];
+      if (lower.includes("photosynthesis")) return [
+        { title: "Start with the purpose", text: "Photosynthesis is how plants capture light energy and store it in glucose, a sugar they can use for growth and repair. It mainly takes place in chloroplasts, especially in leaf cells." },
+        { title: "Follow the ingredients", text: "The plant takes in water through its roots and carbon dioxide through tiny openings in its leaves. Chlorophyll absorbs light. That energy helps the plant rearrange the atoms into glucose and oxygen." },
+        { title: "Use the word equation", text: "Carbon dioxide + water + light energy → glucose + oxygen. The arrow means the ingredients are transformed into the products; the atoms themselves are rearranged, not created from nothing." },
+        { title: "Check the idea", text: "If light is the energy source, what do you predict would happen to the rate of photosynthesis if a plant received much less light? Explain your guess, even if you are unsure." }
+      ];
+      if (lower.includes("fraction")) return [
+        { title: "What a fraction means", text: "A fraction describes equal parts of a whole. The bottom number, the denominator, tells how many equal parts make the whole. The top number, the numerator, tells how many of those parts we have." },
+        { title: "Try a picture in your mind", text: "Imagine a pizza cut into 4 equal slices. If you have 3 slices, you have 3/4. The pieces must be the same size for the fraction to describe the whole fairly." },
+        { title: "Compare carefully", text: "To add fractions with the same denominator, add the numerators and keep the denominator: 1/4 + 2/4 = 3/4. The denominator stays 4 because the size of each piece has not changed." },
+        { title: "Your turn", text: "If a sandwich is cut into 6 equal pieces and you eat 2, what fraction did you eat? You can simplify it if you know how, but first name the numerator and denominator." }
+      ];
+      if (lower.includes("gravity")) return [
+        { title: "The core idea", text: "Gravity is an attraction between objects that have mass. Earth has a lot of mass, so it pulls nearby objects toward its center. That is why a dropped pencil accelerates downward instead of floating away." },
+        { title: "Mass and weight are different", text: "Mass describes how much matter an object has. Weight describes the force of gravity acting on that mass. Your mass would stay nearly the same on the Moon, while your weight would be lower because lunar gravity is weaker." },
+        { title: "A useful model", text: "For objects near Earth's surface, we often model gravitational acceleration as about 9.8 meters per second squared. Air resistance can change how falling objects move, which is why a feather and a stone do not look the same in air." },
+        { title: "Check your understanding", text: "Why might the same object have a different weight on the Moon but nearly the same mass? Try putting that in your own words." }
+      ];
+      if (lower.includes("french revolution") || lower.includes("revolution")) return [
+        { title: "Start with multiple causes", text: "The French Revolution did not have a single cause. Financial crisis, social inequality, food shortages, and new political ideas all contributed, and their effects built on one another." },
+        { title: "Look at the social structure", text: "Before the revolution, French society was divided into estates. Many ordinary people carried heavy tax burdens while privileged groups had exemptions. This system made economic hardship feel deeply unfair." },
+        { title: "Connect crisis to action", text: "The monarchy's financial problems and a poor harvest helped intensify anger. When political institutions failed to resolve the crisis, people challenged the authority of the old system." },
+        { title: "Think like a historian", text: "A strong explanation connects causes rather than listing them. Which cause do you think made the others harder to manage? Use evidence from your class materials to support your view." }
+      ];
+      if (lower.includes("cell") || subject === "Biology") return [
+        { title: "Begin with the question", text: `You asked: “${question}” Let's first identify the key idea in ${subject.toLowerCase()}: living systems are made of interacting parts, and explaining how those parts work together usually makes the details easier to remember.` },
+        { title: "Break it into steps", text: "Name the main parts or terms involved. Then ask what each one does, what it interacts with, and what changes when one part is missing. This turns a large topic into smaller questions you can test one at a time." },
+        { title: "Make a concrete example", text: "Connect the idea to something observable: a diagram from class, a real organism, or a worked example. Explain the example aloud in your own words, then compare it with the definition in your notes." },
+        { title: "Keep going", text: "This is a starting explanation, not a substitute for your course materials. Share a particular term, diagram, or step that feels confusing, and we can focus the next explanation right there." }
+      ];
+      if (subject === "Mathematics" || /\d/.test(question)) return [
+        { title: "Identify what is being asked", text: `Your question is: “${question}” First, write down what you know and what you need to find. In math, translating words into a small equation or diagram often reveals the next step.` },
+        { title: "Work one step at a time", text: "Choose an operation that keeps both sides of an equation balanced. Show each line of work clearly, and check that each transformation does the same thing to both sides." },
+        { title: "Check your result", text: "Substitute your answer back into the original question. If it makes the original statement true and its units make sense, that is good evidence your reasoning is on track." },
+        { title: "Send the exact step", text: "If you share the numbers or the line where you got stuck, I can help you reason through that specific step. You do not need to have the whole solution figured out first." }
+      ];
+      return [
+        { title: "Let's unpack it", text: `You asked: “${question}” A useful first move is to identify the main idea and separate it from the smaller details. Since your focus is ${subject.toLowerCase()}, start with the definition or example your class has been using.` },
+        { title: "Build the explanation", text: "Put the idea into your own words, then ask: what causes it, what changes, and what evidence supports it? Those questions help turn a memorized sentence into understanding." },
+        { title: "Try a small example", text: "Use one specific example from class and explain how the idea applies. If you can connect each part of the example back to the main idea, you are building a strong explanation." },
+        { title: "Your next step", text: "This demo tutor can offer a study structure, but it may miss facts or context. Share a key term, passage, or worked problem from your lesson, and verify important details with your teacher or textbook." }
+      ];
+    }
+    async function requestTutorAnswer(question, chat, attachments = []) {
+      if (!attachments.length && isGreeting(question)) return { sections: tutorAnswer(question, state.subject) };
+      const recentContext = Array.isArray(chat.context) ? chat.context.slice(-MAX_AI_MESSAGES) : [];
+      const attachmentText = attachments.map((file, index) => `File ${index + 1}: ${file.name}\n${file.text}`).join("\n\n");
+      const userContent = attachmentText ? `${question}\n\nExtracted attachments:\n${attachmentText}` : question;
+      const messages = [
+        { role: "system", content: `You are Apex AI, a friendly, patient educational assistant. Answer the exact question directly, in a clear and appropriately detailed way. Explain unfamiliar ideas step by step, use examples when useful, and be encouraging without being patronizing. Use one or two relevant emojis where they help make the answer welcoming or clarify a section; do not overuse them. If you are unsure, say so. Use Markdown for lists and code. Do not claim you have learned permanently; you may use only the recent conversation context provided here.${currentProfile ? ` The learner's name is ${currentProfile.name}.` : ""}` },
+        ...recentContext,
+        { role: "user", content: userContent }
+      ];
+      const response = await fetch("https://text.pollinations.ai/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages, model: "openai", temperature: 0.6 })
+      });
+      const answer = (await response.text()).trim();
+      if (!response.ok || !answer) throw new Error(response.status === 402 ? "The online assistant is rate-limited right now." : `The online assistant returned ${response.status}.`);
+      try { await loadMarkdownTools(); } catch (error) { console.warn("Markdown formatting is unavailable.", error); }
+      chat.context = [...recentContext, { role: "user", content: userContent }, { role: "assistant", content: answer }].slice(-MAX_AI_MESSAGES);
+      return { markdown: answer };
+    }
+    async function sendTutorMessage(text, files = pendingFiles.slice()) {
+      if (assistantBusy || (!text && !files.length)) return;
+      const chat = activeTutorChat();
+      assistantBusy = true;
+      attachmentStatus = files.length ? "Reading files on this device..." : "";
+      render();
+      let extracted = [];
+      try {
+        for (const file of files) extracted.push(await extractAttachment(file));
+      } catch (error) {
+        assistantBusy = false;
+        attachmentStatus = error.message || "A file could not be read.";
+        render();
+        return;
+      }
+      const question = text || "Please review the attached file and share a helpful summary.";
+      pendingFiles = [];
+      attachmentStatus = "";
+      if (chat.title === "New chat") chat.title = isGreeting(question) ? "Friendly hello" : `${question.replace(/\s+/g, " ").slice(0, 36)}${question.length > 36 ? "..." : ""}`;
+      chat.updatedAt = Date.now();
+      chat.messages.push({ role: "student", time: nowLabel(), text: question, attachments: files.map((file) => ({ name: file.name, type: file.type })) });
+      render();
+      try {
+        const result = await requestTutorAnswer(question, chat, extracted);
+        chat.messages.push({ role: "assistant", time: nowLabel(), ...result });
+      } catch (error) {
+        console.error("Online assistant request failed.", error);
+        const sections = extracted.length
+          ? [{ title: "I couldn't analyze the attachment yet", text: "The extracted file text was not sent successfully. Please check your connection and try again." }]
+          : tutorAnswer(question, state.subject);
+        chat.messages.push({ role: "assistant", time: nowLabel(), sections, error: true });
+      } finally {
+        assistantBusy = false;
+        attachmentStatus = "";
+        persist();
+        render();
+        document.querySelector("#tutor-conversation")?.scrollTo({ top: 999999, behavior: "smooth" });
+        document.querySelector("#tutor-input")?.focus();
+      }
+    }
+    function showToast(message) {
+      state.toast = message;
+      render();
+      window.clearTimeout(showToast.timer);
+      showToast.timer = window.setTimeout(() => { state.toast = ""; render(); }, 2400);
+    }
+    app.addEventListener("click", (event) => {
+      const viewButton = event.target.closest("[data-view]");
+      if (viewButton) { state.view = viewButton.dataset.view; persist(); render(); return; }
+      if (event.target.closest('[data-action="open-attachments"]')) { app.querySelector("#attachment-input")?.click(); return; }
+      const removeAttachment = event.target.closest("[data-remove-attachment]");
+      if (removeAttachment) { pendingFiles.splice(Number(removeAttachment.dataset.removeAttachment), 1); attachmentStatus = ""; render(); return; }
+      if (event.target.closest('[data-action="skip-tutorial"]')) { state.tutorialChoice = false; state.tutorialActive = false; render(); return; }
+      if (event.target.closest('[data-action="start-tutorial"]')) { state.tutorialChoice = false; state.tutorialActive = true; state.tutorialStep = 0; state.view = tutorialSteps[0].view; render(); return; }
+      if (event.target.closest('[data-action="next-tutorial"]')) {
+        if (state.tutorialStep >= tutorialSteps.length - 1) { state.tutorialActive = false; render(); return; }
+        state.tutorialStep += 1;
+        state.view = tutorialSteps[state.tutorialStep].view;
+        render();
+        return;
+      }
+      if (event.target.closest('[data-action="previous-tutorial"]')) {
+        if (state.tutorialStep > 0) state.tutorialStep -= 1;
+        state.view = tutorialSteps[state.tutorialStep].view;
+        render();
+        return;
+      }
+      if (event.target.closest('[data-action="new-chat"]')) { createTutorChat(); return; }
+      const tutorChatButton = event.target.closest("[data-chat-id]");
+      if (tutorChatButton) { state.currentChatId = tutorChatButton.dataset.chatId; state.view = "tutor"; persist(); render(); return; }
+      if (event.target.closest('[data-action="clear-ai-memory"]')) {
+        const chat = activeTutorChat();
+        chat.context = [];
+        persist();
+        render();
+        return;
+      }
+      if (event.target.closest('[data-action="open-login"]')) { state.loginOpen = true; render(); document.querySelector("#login-name")?.focus(); return; }
+      if (event.target.closest('[data-action="cancel-login"]')) { state.loginOpen = false; pendingLogin = null; loginError = ""; render(); return; }
+      if (event.target.closest('[data-action="resend-code"]')) {
+        if (pendingLogin) { pendingLogin.code = createVerificationCode(); pendingLogin.expiresAt = Date.now() + 5 * 60 * 1000; pendingLogin.attempts = 0; loginError = ""; render(); }
+        return;
+      }
+      if (event.target.closest('[data-action="logout"]')) {
+        currentProfile = null;
+        localStorage.removeItem(PROFILE_KEY);
+        state.loginOpen = false;
+        pendingLogin = null;
+        loginError = "";
+        render();
+        return;
+      }
+      const promptButton = event.target.closest("[data-prompt]");
+      if (promptButton) { const field = document.querySelector("#tutor-input"); if (field) { field.value = promptButton.dataset.prompt; field.focus(); } return; }
+      const groupButton = event.target.closest("[data-group]");
+      if (groupButton) { state.selectedGroup = groupButton.dataset.group; persist(); render(); return; }
+      const teacherButton = event.target.closest("[data-teacher]");
+      if (teacherButton) { state.selectedTeacher = teacherButton.dataset.teacher; persist(); render(); return; }
+      if (event.target.closest('[data-action="reset-accent"]')) {
+        currentAccent = DEFAULT_ACCENT;
+        document.documentElement.style.setProperty("--accent", currentAccent);
+        localStorage.removeItem("apex_custom_accent");
+        const picker = document.querySelector("#accent-picker");
+        if (picker) picker.value = currentAccent;
+        return;
+      }
+      const agendaToggle = event.target.closest("[data-agenda-toggle]");
+      if (agendaToggle) {
+        const task = state.agenda.find((item) => item.id === agendaToggle.dataset.agendaToggle);
+        if (task) { task.completed = !task.completed; persist(); render(); }
+        return;
+      }
+      const agendaDelete = event.target.closest("[data-agenda-delete]");
+      if (agendaDelete) { state.agenda = state.agenda.filter((item) => item.id !== agendaDelete.dataset.agendaDelete); persist(); render(); return; }
+      if (event.target.closest('[data-action="toggle-create"]')) { state.showCreateGroup = !state.showCreateGroup; render(); }
+    });
+    app.addEventListener("change", (event) => {
+      if (event.target.id === "subject-select") { state.subject = event.target.value; persist(); }
+      if (event.target.id === "attachment-input") {
+        const incoming = Array.from(event.target.files || []);
+        const accepted = [];
+        const rejected = [];
+        for (const file of incoming) {
+          if (!isSupportedAttachment(file)) rejected.push(`${file.name}: unsupported type.`);
+          else if (file.size > MAX_ATTACHMENT_BYTES) rejected.push(`${file.name}: larger than 10 MB.`);
+          else if (pendingFiles.length + accepted.length >= MAX_ATTACHMENTS) rejected.push(`${file.name}: maximum ${MAX_ATTACHMENTS} files per message.`);
+          else accepted.push(file);
+        }
+        pendingFiles.push(...accepted);
+        attachmentStatus = rejected.length ? rejected.join(" ") : accepted.length ? `${pendingFiles.length} file(s) ready. Contents will be read locally when you send.` : "";
+        render();
+      }
+      if (event.target.id === "accent-picker" && CSS.supports("color", event.target.value)) {
+        currentAccent = event.target.value;
+        document.documentElement.style.setProperty("--accent", currentAccent);
+        localStorage.setItem("apex_custom_accent", currentAccent);
+      }
+    });
+    app.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const form = event.target;
+      const data = new FormData(form);
+      if (form.id === "login-form") {
+        const name = String(data.get("name") || "").replace(/\s+/g, " ").trim();
+        const email = String(data.get("email") || "").trim().toLowerCase();
+        if (!name || !isValidEmail(email)) return;
+        pendingLogin = { profile: { name, email }, code: createVerificationCode(), expiresAt: Date.now() + 5 * 60 * 1000, attempts: 0 };
+        loginError = "";
+        state.loginOpen = true;
+        render();
+        document.querySelector("#verification-code")?.focus();
+      } else if (form.id === "login-verify-form") {
+        if (!pendingLogin) return;
+        if (Date.now() > pendingLogin.expiresAt) {
+          pendingLogin = null;
+          loginError = "That code expired. Please start again.";
+          render();
+          return;
+        }
+        const code = String(data.get("code") || "").trim();
+        if (code !== pendingLogin.code) {
+          pendingLogin.attempts += 1;
+          loginError = pendingLogin.attempts >= 5 ? "Too many attempts. Request a new code or start again." : "That code does not match. Check it and try again.";
+          if (pendingLogin.attempts >= 5) pendingLogin = null;
+          render();
+          return;
+        }
+        currentProfile = pendingLogin.profile;
+        localStorage.setItem(PROFILE_KEY, JSON.stringify(currentProfile));
+        pendingLogin = null;
+        loginError = "";
+        state.loginOpen = false;
+        state.tutorialChoice = true;
+        state.tutorialActive = false;
+        render();
+      } else if (form.id === "tutor-form") {
+        const text = String(data.get("message") || "").trim();
+        if ((!text && !pendingFiles.length) || assistantBusy) return;
+        void sendTutorMessage(text, pendingFiles.slice());
+      } else if (form.id === "group-message-form") {
+        const text = String(data.get("message") || "").trim();
+        const group = activeGroup();
+        if (!text || !group) return;
+        group.messages.push({ role: "student", author: "User", time: nowLabel(), text });
+        persist(); render();
+        document.querySelector("#group-messages")?.scrollTo({ top: 999999, behavior: "smooth" });
+      } else if (form.id === "teacher-message-form") {
+        const text = String(data.get("message") || "").trim();
+        const teacher = activeTeacher();
+        if (!text || !teacher) return;
+        teacher.messages.push({ role: "student", time: nowLabel(), text });
+        persist(); render();
+        document.querySelector("#teacher-messages")?.scrollTo({ top: 999999, behavior: "smooth" });
+        showToast("Your message is saved in this browser demo.");
+      } else if (form.id === "create-group-form") {
+        const name = String(data.get("name") || "").trim();
+        const topic = String(data.get("topic") || "").trim();
+        if (!name || !topic) return;
+        const group = { id: `group-${Date.now()}`, name, topic, members: 1, color: "group", messages: [{ role: "assistant", author: "Apex AI", time: nowLabel(), text: "Your study space is ready. Invite classmates through your school's approved channels and start with a question." }] };
+        state.groups.unshift(group);
+        state.selectedGroup = group.id;
+        state.showCreateGroup = false;
+        persist(); render();
+      } else if (form.id === "agenda-form") {
+        const text = String(data.get("task") || "").trim();
+        if (!text) return;
+        state.agenda.unshift({ id: `task-${Date.now()}`, text, completed: false });
+        persist(); render();
+      }
+    });
+    render();
+  </script>
+</body>
+</html>
